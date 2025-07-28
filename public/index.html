@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🩺 Patient Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body { padding: 20px; }
+    .btn-update {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">🩺 Patient Management</h2>
+
+    <!-- Add Patient Form -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Add New Patient</h5>
+        <form id="addPatientForm" class="d-flex flex-wrap gap-2 align-items-center">
+          <input type="text" class="form-control flex-grow-1" id="name" placeholder="Name" required />
+          <input type="text" class="form-control flex-grow-1" id="patientNumber" placeholder="Patient Number" required />
+          <button type="submit" class="btn btn-primary">Add Patient</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Patients List -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Patients List</h5>
+        <table class="table table-striped" id="patientsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Patient Number</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="patientsBody">
+            <!-- Dynamic content -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchPatients() {
+      const res = await fetch('/api/patients');
+      const data = await res.json();
+      const tbody = document.getElementById('patientsBody');
+      tbody.innerHTML = '';
+      data.patients.forEach(patient => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${patient.id}</td>
+          <td><input type="text" class="form-control" value="${patient.name}" id="name-${patient.id}"></td>
+          <td><input type="text" class="form-control" value="${patient.patient_number}" id="number-${patient.id}"></td>
+          <td>
+            <button class="btn btn-success btn-sm btn-update" onclick="updatePatient(${patient.id})">Update</button>
+            <button class="btn btn-danger btn-sm btn-delete" onclick="deletePatient(${patient.id})">Delete</button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function updatePatient(id) {
+      const nameInput = document.getElementById(`name-${id}`);
+      const numberInput = document.getElementById(`number-${id}`);
+
+      const name = nameInput.value.trim();
+      const patientNumber = numberInput.value.trim();
+
+      if (!name || !patientNumber) {
+        alert('Name and Patient Number cannot be empty.');
+        return;
+      }
+
+      const res = await fetch(`/api/patients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, patientNumber }),
+      });
+
+      if (res.ok) {
+        alert('Patient updated successfully');
+        fetchPatients();
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to update patient: ${errorData.error || 'Unknown error'}`);
+      }
+    }
+
+    async function deletePatient(id) {
+      if (confirm('Are you sure you want to delete this patient?')) {
+        await fetch(`/api/patients/${id}`, { method: 'DELETE' });
+        fetchPatients();
+      }
+    }
+
+    document.getElementById('addPatientForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const patientNumber = document.getElementById('patientNumber').value.trim();
+
+      if (!name || !patientNumber) {
+        alert('Please fill both fields');
+        return;
+      }
+
+      await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, patientNumber }),
+      });
+
+      e.target.reset();
+      fetchPatients();
+    });
+
+    // Initial load
+    fetchPatients();
+  </script>
+</body>
+</html>
